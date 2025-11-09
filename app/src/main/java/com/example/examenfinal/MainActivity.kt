@@ -3,20 +3,24 @@ package com.example.examenfinal
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
-import com.example.rentavirtual.ui.navigation.AppNavHost
+import com.example.examenfinal.ui.AppNavHost
+import com.example.examenfinal.ui.theme.ExamenFinalTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
-            MaterialTheme {
-                Surface(color = MaterialTheme.colors.background) {
-                    val navController = rememberNavController()
-                    AppNavHost(navController)
-                }
+            ExamenFinalTheme {
+                val navController = rememberNavController()
+                val mainViewModel: MainViewModel = viewModel()
+
+                AppNavHost(
+                    navController = navController,
+                    mainViewModel = mainViewModel
+                )
             }
         }
     }

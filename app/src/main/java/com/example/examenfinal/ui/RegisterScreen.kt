@@ -1,40 +1,123 @@
-package com.example.rentavirtual.ui.screens
+package com.example.examenfinal.ui.theme
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.example.rentavirtual.viewmodel.MainViewModel
+import com.example.examenfinal.MainViewModel
 
 @Composable
-fun RegisterScreen(navController: NavController, vm: MainViewModel = MainViewModel()) {
+fun RegisterScreen(
+    mainViewModel: MainViewModel,
+    onRegisterSuccess: () -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
+    var creditCard by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    var fullName by remember { mutableStateOf("") }
-    var ageStr by remember { mutableStateOf("") }
-    var cardLast4 by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf<String?>(null) }
+    var password by remember { mutableStateOf("") }
+    var isAdmin by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center) {
-        Text("Registro", style = MaterialTheme.typography.h5)
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
-        OutlinedTextField(value = pass, onValueChange = { pass = it }, label = { Text("Contraseña") })
-        OutlinedTextField(value = fullName, onValueChange = { fullName = it }, label = { Text("Nombre completo") })
-        OutlinedTextField(value = ageStr, onValueChange = { ageStr = it.filter { c -> c.isDigit() } }, label = { Text("Edad") })
-        OutlinedTextField(value = cardLast4, onValueChange = { cardLast4 = it.take(4).filter { c -> c.isDigit() } }, label = { Text("No. tarjeta (últimos 4)") })
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = {
-            vm.registerAndSaveProfile(email.trim(), pass.trim(), fullName.trim(), ageStr.toIntOrNull() ?: 0, cardLast4) { ok, err ->
-                if (ok) {
-                    message = "Registro OK. Inicia sesión."
-                    navController.navigate("login")
-                } else {
-                    message = err
+    val isLoading by mainViewModel.isLoading
+    val error by mainViewModel.error
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Registro", style = MaterialTheme.typography.headlineMedium)
+
+        Spacer(Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Nombre completo") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = age,
+            onValueChange = { age = it },
+            label = { Text("Edad") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = creditCard,
+            onValueChange = { creditCard = it },
+            label = { Text("No. Tarjeta de crédito") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Correo") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Contraseña") },
+            visualTransformation = PasswordVisualTransformation(),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = isAdmin,
+                onCheckedChange = { isAdmin = it }
+            )
+            Text("Registrar como administrador")
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                val role = if (isAdmin) "admin" else "user"
+                mainViewModel.register(
+                    email = email.trim(),
+                    password = password,
+                    name = name.trim(),
+                    age = age.toIntOrNull() ?: 0,
+                    creditCard = creditCard.trim(),
+                    role = role
+                ) {
+                    onRegisterSuccess()
                 }
-            }
-        }) { Text("Crear cuenta") }
-        message?.let { Text(it, color = MaterialTheme.colors.onSurface) }
+            },
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Registrarse")
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        error?.let {
+            Text(it, color = Color.Red)
+        }
     }
 }

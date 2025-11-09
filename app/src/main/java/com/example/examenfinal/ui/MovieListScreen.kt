@@ -1,6 +1,5 @@
-package com.example.rentavirtual.ui.screens
+package com.example.examenfinal.ui.theme
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,37 +8,64 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
-import com.example.rentavirtual.data.models.Movie
-import com.example.rentavirtual.viewmodel.MainViewModel
+import com.example.examenfinal.MainViewModel
+import com.example.examenfinal.Rental.Rental
 
 @Composable
-fun MovieListScreen(navController: NavController, vm: MainViewModel = MainViewModel()) {
-    val movies by remember { vm.movies }
-    // carga inicial si no lo hizo
-    LaunchedEffect(Unit) { vm.loadInitialData() }
+fun MovieListScreen(
+    navController: NavController,
+    mainViewModel: MainViewModel
+) {
+    val movies by mainViewModel.movies
+    val currentUser by mainViewModel.currentUser
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-        items(movies) { movie ->
-            Card(modifier = Modifier.fillMaxWidth().padding(6.dp)) {
-                Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column(Modifier.weight(1f)) {
-                        Text(movie.title, style = MaterialTheme.typography.h6)
-                        Text(movie.description, maxLines = 2)
-                        Text("Precio: Q${movie.price}")
-                    }
-                    if (movie.posterUrl.isNotEmpty()) {
-                        Image(painter = rememberAsyncImagePainter(movie.posterUrl), contentDescription = movie.title, modifier = Modifier.size(80.dp))
-                    }
-                    Column {
-                        Button(onClick = {
-                            vm.rentMovie(movie) { ok, err ->
-                                // Show simple alert
+    LaunchedEffect(Unit) {
+        mainViewModel.loadMovies()
+    }
+
+    Column(Modifier.fillMaxSize().padding(16.dp)) {
+        Text("Películas", style = MaterialTheme.typography.h5)
+        Spacer(Modifier.height(8.dp))
+
+        if (currentUser == null) {
+            Card(Modifier.fillMaxWidth()) {
+                Text(
+                    "Inicia sesión para rentar",
+                    Modifier.padding(16.dp)
+                )
+            }
+        } else {
+            LazyColumn {
+                items(movies) { movie ->
+                    Card(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Column(Modifier.padding(8.dp)) {
+                            Text(movie.title)
+                            Spacer(Modifier.height(4.dp))
+                            Button(onClick = {
+                                val now = System.currentTimeMillis()
+                                val oneDay = 24L * 60 * 60 * 1000
+
+                                val rental = Rental(
+                                    userId = currentUser!!.id,
+                                    movieId = movie.id,
+                                    startDate = now,
+                                    endDate = now + oneDay
+                                )
+
+                                mainViewModel.createRental(rental)
+                            }) {
+                                Text("Rentar")
                             }
-                        }) { Text("Rentar") }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+

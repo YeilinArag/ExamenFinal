@@ -1,10 +1,12 @@
-package com.example.rentavirtual.data.models
+package com.example.examenfinal.User
 
 data class User(
-    val uid: String = "",
-    val fullName: String = "",
+    val id: String = "",
+    val name: String = "",
+    val email: String = "",
     val age: Int = 0,
-    val cardNumberLast4: String = "",
-    val photoUrl: String = "",
-    val role: String = "user" // "user" o "admin"
+    val creditCard: String = "",
+    val role: String = "user",  // "user" o "admin"
+    val photoUrl: String? = null
 )
+

@@ -1,83 +1,129 @@
-package com.example.rentavirtual.viewmodel
+package com.example.examenfinal
 
-import android.net.Uri
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.rentavirtual.data.FirebaseRepository
-import com.example.rentavirtual.data.models.Movie
-import com.example.rentavirtual.data.models.Rental
-import com.example.rentavirtual.data.models.User
-import com.google.firebase.Timestamp
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
+import com.example.examenfinal.User.User
+import com.example.examenfinal.Movie.Movie
+import com.example.examenfinal.Rental.Rental
 import kotlinx.coroutines.launch
-import java.util.*
 
-class MainViewModel(private val repo: FirebaseRepository = FirebaseRepository()) : ViewModel() {
+class MainViewModel(
+    private val repo: FirebaseRepository = FirebaseRepository()
+) : ViewModel() {
 
-    val currentUser = mutableStateOf<User?>(null)
-    val movies = mutableStateOf<List<Movie>>(emptyList())
-    val rentals = mutableStateOf<List<Rental>>(emptyList())
-    val isAdmin = mutableStateOf(false)
+    // UI state
+    private val _isLoading = mutableStateOf(false)
+    val isLoading: State<Boolean> = _isLoading
 
-    fun loadInitialData() {
-        // cargar usuario auth -> doc user -> movies -> rentals
-        val authUser = repo.getCurrentUser() ?: return
-        viewModelScope.launch {
-            val u = repo.getUser(authUser.uid)
-            currentUser.value = u
-            isAdmin.value = u?.role == "admin"
-            // escuchar movies
-            repo.listenMovies { movies.value = it }
-            // escuchar rentals
-            repo.listenRentalsForUser(authUser.uid, isAdmin.value) { rentals.value = it }
-        }
-    }
+    private val _error = mutableStateOf<String?>(null)
+    val error: State<String?> = _error
 
-    fun registerAndSaveProfile(email: String, password: String, fullName: String, age: Int, cardLast4: String, onResult: (Boolean, String?) -> Unit) {
+    private val _currentUser = mutableStateOf<User?>(null)
+    val currentUser: State<User?> = _currentUser
+
+    private val _movies = mutableStateOf<List<Movie>>(emptyList())
+    val movies: State<List<Movie>> = _movies
+
+    private val _rentals = mutableStateOf<List<Rental>>(emptyList())
+    val rentals: State<List<Rental>> = _rentals
+
+    // ---------- Auth ----------
+    fun login(email: String, password: String, onSuccess: () -> Unit = {}) {
+        _isLoading.value = true
+        _error.value = null
+
         viewModelScope.launch {
             try {
-                val fu = repo.register(email, password) ?: throw Exception("Registro falló")
-                val user = User(uid = fu.uid, fullName = fullName, age = age, cardNumberLast4 = cardLast4, role = "user")
-                repo.saveUserProfile(user)
-                onResult(true, null)
+                repo.loginUser(email, password)
+                _currentUser.value = repo.getCurrentUserProfile()
+                onSuccess()
             } catch (e: Exception) {
-                onResult(false, e.message)
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    fun uploadPhotoAndSave(uid: String, uri: Uri, onResult: (Boolean, String?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val url = repo.uploadProfilePhoto(uid, uri)
-                val u = currentUser.value?.copy(photoUrl = url) ?: return@launch
-                repo.saveUserProfile(u)
-                currentUser.value = u
-                onResult(true, null)
-            } catch (e: Exception) {
-                onResult(false, e.message)
-            }
-        }
-    }
+    fun register(
+        email: String,
+        password: String,
+        name: String,
+        age: Int,
+        creditCard: String,
+        role: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        _isLoading.value = true
+        _error.value = null
 
-    fun rentMovie(movie: Movie, days: Int = 3, onResult: (Boolean, String?) -> Unit) {
         viewModelScope.launch {
             try {
-                val cu = currentUser.value ?: throw Exception("Usuario no cargado")
-                val start = Timestamp.now()
-                val end = Timestamp(Date(System.currentTimeMillis() + days * 24L * 3600L * 1000L))
-                val rental = Rental(
-                    movieId = movie.id,
-                    movieTitle = movie.title,
-                    userId = cu.uid,
-                    userName = cu.fullName.ifBlank { cu.uid },
-                    startDate = start,
-                    endDate = end
+                val fbUser = repo.registerUser(email, password)
+                val uid = fbUser?.uid ?: return@launch
+
+                val user = User(
+                    id = uid,
+                    name = name,
+                    email = email,
+                    age = age,
+                    creditCard = creditCard,
+                    role = role,
+                    photoUrl = null
                 )
-                repo.createRental(rental)
-                onResult(true, null)
+
+                repo.saveUserProfile(user)
+                _currentUser.value = user
+                onSuccess()
             } catch (e: Exception) {
-                onResult(false, e.message)
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun logout() {
+        repo.logout()
+        _currentUser.value = null
+    }
+
+    // ---------- Movies ----------
+    fun loadMovies() {
+        viewModelScope.launch {
+            try {
+                _movies.value = repo.getAllMovies()
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
+    }
+
+    // ---------- Rentals ----------
+    fun createRental(rental: Rental, onSuccess: () -> Unit = {}) {
+        _isLoading.value = true
+        _error.value = null
+
+        viewModelScope.launch {
+            try {
+                repo.createRental(rental)
+                onSuccess()
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun loadRentals() {
+        viewModelScope.launch {
+            try {
+                _rentals.value = repo.getAllRentals()
+            } catch (e: Exception) {
+                _error.value = e.message
             }
         }
     }

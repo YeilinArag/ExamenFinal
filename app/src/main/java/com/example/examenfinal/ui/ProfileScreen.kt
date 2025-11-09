@@ -1,75 +1,46 @@
-package com.example.rentavirtual.ui.screens
+package com.example.examenfinal.ui
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
-import androidx.compose.runtime.*
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.example.rentavirtual.viewmodel.MainViewModel
+import com.example.examenfinal.MainViewModel
 
 @Composable
-fun ProfileScreen(navController: NavController, vm: MainViewModel = MainViewModel()) {
-    val userState = vm.currentUser
-    val user = userState.value
-    var name by remember { mutableStateOf(user?.fullName ?: "") }
-    var age by remember { mutableStateOf(user?.age?.toString() ?: "") }
-    var last4 by remember { mutableStateOf(user?.cardNumberLast4 ?: "") }
-    var msg by remember { mutableStateOf<String?>(null) }
+fun ProfileScreen(
+    mainViewModel: MainViewModel = viewModel()
+) {
+    val user by mainViewModel.currentUser
 
-    // photo picker
-    var pickedUri by remember { mutableStateOf<Uri?>(null) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) pickedUri = uri
-    }
-
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Perfil", style = MaterialTheme.typography.h5)
-        Spacer(Modifier.height(12.dp))
-        if (!user?.photoUrl.isNullOrBlank()) {
-            Image(painter = rememberAsyncImagePainter(user?.photoUrl), contentDescription = "Foto", modifier = Modifier.size(120.dp))
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        if (user == null) {
+            Text("No hay usuario autenticado")
         } else {
-            Box(modifier = Modifier.size(120.dp)) { Text("Sin foto") }
-        }
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = { launcher.launch("image/*") }) { Text("Seleccionar foto") }
-        pickedUri?.let {
-            Spacer(Modifier.height(8.dp))
-            Image(painter = rememberAsyncImagePainter(it), contentDescription = "Preview", modifier = Modifier.size(120.dp))
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = {
-                // subir foto
-                val uid = user?.uid ?: return@Button
-                vm.uploadPhotoAndSave(uid, it) { ok, err ->
-                    msg = if (ok) "Foto subida" else "Error: $err"
-                }
-            }) { Text("Subir foto") }
-        }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre completo") })
-        OutlinedTextField(value = age, onValueChange = { age = it.filter { c -> c.isDigit() } }, label = { Text("Edad") })
-        OutlinedTextField(value = last4, onValueChange = { last4 = it.take(4).filter { c -> c.isDigit() } }, label = { Text("No. tarjeta (últimos 4)") })
-        Spacer(Modifier.height(12.dp))
-        Button(onClick = {
-            // actualizar doc users/{uid}
-            val u = user?.copy(fullName = name, age = age.toIntOrNull() ?: 0, cardNumberLast4 = last4)
-            if (u != null) {
-                vm.viewModelScope.launch {
-                    try {
-                        vm.repo.saveUserProfile(u)
-                        vm.currentUser.value = u
-                        msg = "Perfil actualizado"
-                    } catch (e: Exception) { msg = e.message }
+                if (!user!!.photoUrl.isNullOrEmpty()) {
+                    Image(
+                        painter = rememberAsyncImagePainter(user!!.photoUrl),
+                        contentDescription = "Foto de perfil",
+                        modifier = Modifier.size(96.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
+
+                Text(text = user!!.name, style = MaterialTheme.typography.h6)
+                Text(text = user!!.email, style = MaterialTheme.typography.body2)
+                Text(text = "Rol: ${user!!.role}", style = MaterialTheme.typography.body2)
             }
-        }) { Text("Guardar") }
-        msg?.let { Text(it) }
+        }
     }
 }
